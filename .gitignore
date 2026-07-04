@@ -1,0 +1,15 @@
+# Variables de entorno reales (contienen tus tokens)
+.env
+
+# Tu configuración real de servicios (puede contener tu token de GitHub
+# guardado desde el panel, y la lista de tus propios contenedores)
+config/servicios.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / SO
+.DS_Store
+.vscode/
+docker-compose.yml
