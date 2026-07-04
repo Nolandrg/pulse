@@ -75,10 +75,9 @@ Everything else (interval, check time window, watched services) is managed from 
 
 Pulse is distributed under **AGPL-3.0 with the Commons Clause** added. In short:
 
-- You may use, modify and redistribute the code freely, even bundled inside something larger (e.g. a Linux distribution).
+- You may use, modify and redistribute Pulse freely, including as part of a larger project (e.g. a Linux distribution).
 - If you modify Pulse and offer it over a network (even for free), you're required to publish the source code of your changes.
-- You may not sell Pulse, offer it as a paid service, or redistribute a product whose value derives substantially from it, without the author's express permission.
-
+- You may not sell Pulse, offer it as a paid service, or redistribute a commercial product whose primary value comes from Pulse, without the author's express permission.
 See the [`LICENSE`](./LICENSE) file for the full legal text.
 
 ## Author
