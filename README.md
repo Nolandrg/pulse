@@ -83,4 +83,4 @@ See the [`LICENSE`](./LICENSE) file for the full legal text.
 ## Author
 
 David Rebollo García ([@Nolandrg](https://github.com/Nolandrg))
-Questions, suggestions or bug reports are welcome through GitHub Issues.
+  Questions, suggestions or bug reports are welcome through GitHub Issues.
