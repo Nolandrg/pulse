@@ -3,6 +3,12 @@ name: Publicar imagen Docker
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag a publicar (ej. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
 
 permissions:
   contents: read
@@ -29,4 +35,4 @@ jobs:
           push: true
           tags: |
             ghcr.io/nolandrg/pulse:latest
-            ghcr.io/nolandrg/pulse:${{ github.event.release.tag_name }}
+            ghcr.io/nolandrg/pulse:${{ github.event.inputs.tag || github.event.release.tag_name }}
