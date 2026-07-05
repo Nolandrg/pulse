@@ -6,9 +6,15 @@ Lightweight self-hosted dashboard for checking and notifying updates on Docker c
 
 Pulse exists to replace combinations that are heavier than necessary for a simple task: knowing whether a newer version of your containers is available, without running a headless browser just to keep a Distill-style extension watching release pages, and without the inconsistencies that tools like Watchtower or WUD have when it comes to correctly identifying the actual latest version of each image.
 
-## Screenshot
+## Screenshots
 
-![Pulse dashboard](./docs/screenshot.png)
+| Dark mode | Light mode |
+|---|---|
+| ![Dark mode](./docs/screenshot-dark.png) | ![Light mode](./docs/screenshot-light.png) |
+
+| Add Service | Config |
+|---|---|
+| ![Add Service](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
 ## What it does
 
@@ -70,6 +76,13 @@ Everything else (interval, check time window, watched services) is managed from 
 - **Añadir Servicio (Add Service)**: manually registers a service that isn't a local container (for example, a program installed directly on the system).
 - Click a service's **name** to go to its source page (GitHub repo, or Docker Hub/GHCR tags).
 - Click a service's **LED** to force an immediate check for that service.
+- Click the number in the **V. ACTUAL** column to manually correct the installed version.
+
+### ⚠️ Important difference: Docker containers vs. system-installed programs
+
+- For a **Docker container**, the LED does two things at once: it re-reads what version is actually running (in case you updated it yourself, with Portainer, Dockge, etc.) and checks for the latest one online. That's why clicking the LED after an update is enough.
+- For a **program installed directly on the operating system** (GitHub type, no container -- e.g. AdGuard Home or Filebrowser in a typical install), Pulse **has no way to find out which version you have installed on its own** -- there's no socket or API equivalent to Docker's to ask the OS. The LED for these services only checks for the latest version available; **it never updates the installed one**.
+  - If you update one of these programs by hand, you need to tell Pulse yourself: click the installed version number (V. ACTUAL column) and type in the new one. On save, it checks immediately whether you're already up to date.
 
 ## License
 
@@ -78,9 +91,11 @@ Pulse is distributed under **AGPL-3.0 with the Commons Clause** added. In short:
 - You may use, modify and redistribute Pulse freely, including as part of a larger project (e.g. a Linux distribution).
 - If you modify Pulse and offer it over a network (even for free), you're required to publish the source code of your changes.
 - You may not sell Pulse, offer it as a paid service, or redistribute a commercial product whose primary value comes from Pulse, without the author's express permission.
+
 See the [`LICENSE`](./LICENSE) file for the full legal text.
 
 ## Author
 
 David Rebollo García ([@Nolandrg](https://github.com/Nolandrg))
-  Questions, suggestions or bug reports are welcome through GitHub Issues.
+
+Questions, suggestions or bug reports are welcome through GitHub Issues.

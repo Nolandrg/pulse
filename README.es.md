@@ -6,9 +6,15 @@ Panel ligero de autocomprobación y notificación de actualizaciones para conten
 
 Pulse nace para sustituir combinaciones más pesadas de lo necesario para una tarea sencilla: saber si tienes una versión nueva disponible de tus contenedores, sin tener que mantener un navegador headless corriendo una extensión (como Distill) solo para vigilar páginas de releases, y sin las inconsistencias de herramientas como Watchtower o WUD a la hora de identificar correctamente la última versión real de cada imagen.
 
-## Captura de pantalla
+## Capturas de pantalla
 
-![Panel de Pulse](./docs/screenshot.png)
+| Modo oscuro | Modo claro |
+|---|---|
+| ![Modo oscuro](./docs/screenshot-dark.png) | ![Modo claro](./docs/screenshot-light.png) |
+
+| Añadir Servicio | Config |
+|---|---|
+| ![Añadir Servicio](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
 ## Qué hace
 
@@ -91,3 +97,5 @@ Consulta el archivo [`LICENSE`](./LICENSE) para el texto legal completo.
 ## Autor
 
 David Rebollo García ([@Nolandrg](https://github.com/Nolandrg))
+
+Preguntas, sugerencias o reportes de errores son bienvenidos a través de GitHub Issues.

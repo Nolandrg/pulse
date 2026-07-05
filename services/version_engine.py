@@ -21,7 +21,7 @@ FLOATING_TAGS = {"latest", "release", "stable", "master", "main", "edge", "rolli
 
 # Patrones de sufijo conocidos por proveedor de imagen
 SUFFIX_PATTERNS = {
-    "linuxserver": r"-ls\d+$",
+    "linuxserver": r"-ls(\d+)$",
 }
 
 DATE_PATTERN = re.compile(r"^v?\d{8}-\d{3,4}$")
@@ -146,11 +146,26 @@ def normalizar_semver(tag: str, patron_sufijo: str | None = None) -> str:
     return t
 
 
+def _extraer_numero_sufijo(tag: str, patron_sufijo: str) -> int | None:
+    """Extrae el número de build del sufijo (ej. 389 de '-ls389'), si el patrón lo captura."""
+    m = re.search(patron_sufijo, tag)
+    if m and m.groups():
+        try:
+            return int(m.group(1))
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
 def comparar_semver(instalada: str, remota: str, patron_sufijo: str | None = None) -> str | None:
     """
     Devuelve 'green' si la instalada es igual o más nueva que la remota,
     'yellow' si hay una versión remota más nueva, o None si no se pudo parsear
     ninguna de las dos como semver (para que el llamante decida el fallback).
+
+    Si la versión base es idéntica pero el sufijo lleva un número de build
+    (ej. LinuxServer: -lsXXX) que ha subido, también se considera actualización
+    -- el proveedor puede reconstruir la imagen sin tocar la versión de la app.
     """
     a = normalizar_semver(instalada, patron_sufijo)
     b = normalizar_semver(remota, patron_sufijo)
@@ -159,7 +174,19 @@ def comparar_semver(instalada: str, remota: str, patron_sufijo: str | None = Non
         vb = pkg_version.parse(b)
     except InvalidVersion:
         return None
-    return "green" if va >= vb else "yellow"
+
+    if va > vb:
+        return "green"
+    if va < vb:
+        return "yellow"
+
+    if patron_sufijo:
+        na = _extraer_numero_sufijo(instalada, patron_sufijo)
+        nb = _extraer_numero_sufijo(remota, patron_sufijo)
+        if na is not None and nb is not None and nb > na:
+            return "yellow"
+
+    return "green"
 
 
 def comparar_fecha(instalada: str, remota: str) -> str | None:
