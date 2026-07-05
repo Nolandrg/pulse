@@ -8,9 +8,11 @@ Pulse exists to replace combinations that are heavier than necessary for a simpl
 
 ## Screenshots
 
-| Dark mode | Light mode |
-|---|---|
-| ![Dark mode](./docs/screenshot-dark.png) | ![Light mode](./docs/screenshot-light.png) |
+### Dark mode
+![Dark mode](./docs/screenshot-dark.png)
+
+### Light mode
+![Light mode](./docs/screenshot-light.png)
 
 | Add Service | Config |
 |---|---|

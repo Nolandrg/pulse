@@ -8,9 +8,11 @@ Pulse nace para sustituir combinaciones más pesadas de lo necesario para una ta
 
 ## Capturas de pantalla
 
-| Modo oscuro | Modo claro |
-|---|---|
-| ![Modo oscuro](./docs/screenshot-dark.png) | ![Modo claro](./docs/screenshot-light.png) |
+### Modo oscuro
+![Modo oscuro](./docs/screenshot-dark.png)
+
+### Modo claro
+![Modo claro](./docs/screenshot-light.png)
 
 | Añadir Servicio | Config |
 |---|---|
