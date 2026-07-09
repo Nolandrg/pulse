@@ -36,7 +36,7 @@ BARE_VERSION_PATTERN = re.compile(r"^v?\d+(\.\d+)?$")
 _SUFIJOS_INOFENSIVOS = re.compile(r"-(stable|final)$", re.IGNORECASE)
 
 # Códigos de prerelease reconocidos como fragmento completo tras separar por . - _
-_CODIGOS_PRERELEASE = {"alpha", "beta", "rc", "dev", "pre", "nightly", "canary", "preview", "snapshot", "a", "b"}
+_CODIGOS_PRERELEASE = {"alpha", "beta", "rc", "dev", "development", "pre", "nightly", "canary", "preview", "snapshot", "a", "b"}
 
 # Timestamp incrustado en cualquier parte del tag (ej. "10.11.11.20260606-abcd"),
 # no solo cuando el tag es puramente numérico.
