@@ -1,0 +1,24 @@
+services:
+  pulse:
+    build: .
+    container_name: pulse
+    restart: unless-stopped
+    user: 1000:1000 # Cambia esto por tu UID:GID si no coincide (usa `id -u`/`id -g`)
+    group_add:
+      - "463" # Grupo con permisos sobre /var/run/docker.sock (ajusta al de tu sistema)
+    ports:
+      - 8060:8000 # Usa un puerto libre disponible en tu caso
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TZ=${TZ:-Europe/Madrid}
+      - DEFAULT_INTERVAL=${DEFAULT_INTERVAL:-30}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - ./main.py:/app/main.py
+      - ./services:/app/services
+      - ./config:/app/config
+      - ./templates:/app/templates
+      - ./static:/app/static
+      - /var/run/docker.sock:/var/run/docker.sock
+networks: {}

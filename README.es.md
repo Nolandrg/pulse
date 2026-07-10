@@ -35,7 +35,27 @@ Pulse nace para sustituir combinaciones más pesadas de lo necesario para una ta
 
 ## Instalación
 
-Pulse no publica todavía una imagen precompilada — se construye localmente con Docker Compose.
+Tienes dos opciones: usar la imagen ya construida (más rápido, sin clonar el repo) o construirla tú mismo desde el código.
+
+### Opción A: usar la imagen ya publicada (recomendado)
+
+1. Crea una carpeta para Pulse con una subcarpeta `config` dentro:
+
+   ```bash
+   mkdir -p pulse/config && cd pulse
+   ```
+
+2. Descarga [`docker-compose-image-example.yml`](./docker-compose-image-example.yml) y [`.env.example`](./.env.example) de este repo en esa carpeta, y renómbralos a `docker-compose.yml` y `.env` respectivamente. Rellena `.env` con tus datos.
+
+3. Levántalo:
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. Abre el panel en `http://<tu-servidor>:8060`.
+
+### Opción B: construir desde el código
 
 1. Clona el repositorio:
 
@@ -44,13 +64,9 @@ Pulse no publica todavía una imagen precompilada — se construye localmente co
    cd pulse
    ```
 
-2. Copia el archivo de ejemplo de variables de entorno y edítalo con tus datos:
+2. Renombra [`docker-compose-example.yml`](./docker-compose-example.yml) a `docker-compose.yml`, y `.env.example` a `.env`. Rellena `.env` con tus datos.
 
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Levanta el contenedor:
+3. Constrúyelo y levántalo:
 
    ```bash
    docker compose up -d --build
