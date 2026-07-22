@@ -67,13 +67,13 @@ def elegir_mejor_semver(tags: list[str], patron_sufijo: str | None = None) -> st
     for nombre in candidatos:
         if nombre.lower() in FLOATING_TAGS:
             continue
-        if BARE_VERSION_PATTERN.match(nombre):
-            continue
         if _EMBED_TIMESTAMP.search(nombre):
             continue
         if es_prerelease(nombre):
             continue
         limpio = normalizar_semver(nombre, patron_sufijo)
+        if BARE_VERSION_PATTERN.match(limpio):
+            continue
         try:
             parsed = pkg_version.parse(limpio)
         except InvalidVersion:
