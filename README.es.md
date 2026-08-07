@@ -19,7 +19,13 @@ Pulse nace para sustituir combinaciones más pesadas de lo necesario para una ta
 | ![Añadir Servicio](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
 ### Vista móvil
-![Vista móvil](./docs/screenshot-mobile.png)
+
+<table>
+<tr>
+<td><img src="./docs/screenshot-mobile.png" width="220"></td>
+<td><img src="./docs/screenshot-mobile-light.png" width="220"></td>
+</tr>
+</table>
 
 ## Qué hace
 

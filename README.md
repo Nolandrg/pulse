@@ -19,7 +19,13 @@ Pulse exists to replace combinations that are heavier than necessary for a simpl
 | ![Add Service](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
 ### Mobile view
-![Mobile view](./docs/screenshot-mobile.png)
+
+<table>
+<tr>
+<td><img src="./docs/screenshot-mobile.png" width="220"></td>
+<td><img src="./docs/screenshot-mobile-light.png" width="220"></td>
+</tr>
+</table>
 
 ## What it does
 
