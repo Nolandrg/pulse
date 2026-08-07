@@ -18,6 +18,9 @@ Pulse exists to replace combinations that are heavier than necessary for a simpl
 |---|---|
 | ![Add Service](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
+### Mobile view
+![Mobile view](./docs/screenshot-mobile.png)
+
 ## What it does
 
 - Watches images on **Docker Hub**, **GHCR** (and generic OCI registries) and **GitHub repos** from a single dashboard.

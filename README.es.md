@@ -18,6 +18,9 @@ Pulse nace para sustituir combinaciones más pesadas de lo necesario para una ta
 |---|---|
 | ![Añadir Servicio](./docs/screenshot-add.png) | ![Config](./docs/screenshot-config.png) |
 
+### Vista móvil
+![Vista móvil](./docs/screenshot-mobile.png)
+
 ## Qué hace
 
 - Vigila imágenes de **Docker Hub**, **GHCR** y **repos de GitHub** en un único panel.
