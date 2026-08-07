@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pulse</title>
     <style>
         body {
@@ -73,6 +74,10 @@
             margin: 16px 0 16px 16px;
             box-sizing: border-box;
             height: calc(100vh - 32px);
+            position: sticky;
+            top: 16px;
+            align-self: flex-start;
+            flex-shrink: 0;
             border-radius: 14px;
             background:
                 radial-gradient(55% 120% at 100% 50%, var(--hi), transparent 60%),
@@ -183,13 +188,64 @@
         .modal-content label { font-size: 0.8rem; color: var(--text-muted); }
         .modal-hint { font-size: 0.7rem; color: var(--text-muted); margin: -6px 0 10px 0; }
         .btn-save { background: #4CAF50; width: 100%; padding: 10px; border: none; color: white; cursor: pointer; margin-top: 10px;}
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; align-items: stretch; }
+
+            .sidebar {
+                width: auto;
+                height: auto;
+                position: static;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin: 0;
+                padding: 8px 16px;
+                border-radius: 0;
+            }
+            .logo-container { width: 36px; height: 36px; margin-bottom: 0; }
+            .sidebar h1 { width: auto; margin: 0; font-size: 1.05rem; }
+            .footer-info { display: block; margin: 0; font-size: 0.6rem; }
+
+            .main-content { padding: 12px 8px; }
+            .header { flex-wrap: wrap; gap: 8px; }
+
+            .grid-header { display: none; }
+
+            .row-plate {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+                padding: 14px 16px;
+            }
+            .row-plate > span {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right;
+            }
+            .row-plate > span[data-label]::before {
+                content: attr(data-label);
+                color: var(--text-muted);
+                font-size: 0.72rem;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+                text-align: left;
+                margin-right: 12px;
+            }
+            .row-plate .version-col { max-width: none; overflow: visible; text-overflow: clip; white-space: normal; }
+            .led { width: 26px; height: 26px; }
+            .row-plate .keycap { width: 44px; height: 44px; margin: 0 8px; font-size: 1.1rem; }
+        }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <div class="logo-container"><img src="/static/logo.png" alt="Logo"></div>
         <h1>PULSE</h1>
-        <div class="footer-info">v1.0.0<br>© 2026 Pulse</div>
+        <div class="footer-info">v1.1.0<br>© 2026 Pulse</div>
     </div>
     <div class="main-content">
         <div class="container">
@@ -213,23 +269,23 @@
             </div>
             {% for s in servicios %}
             <div class="row-plate {% if s.get('pausado', False) %}paused-row{% elif s.estado_led == 'yellow' %}row-update{% endif %}">
-                <span class="text-center">{{ loop.index }}</span>
-                <span class="text-center">
+                <span class="text-center" data-label="ID">{{ loop.index }}</span>
+                <span class="text-center" data-label="Estado">
                     <span class="led" style="background-color: {% if s.get('pausado', False) %}gray{% else %}{{ s.get('estado_led', 'red') }}{% endif %};" onclick="checkOne('{{ s.nombre }}')"></span>
                 </span>
-                <span class="nombre-cell"><a href="{{ s.url_fuente }}" target="_blank" rel="noopener">{{ s.nombre }}</a></span>
-                <span>
+                <span class="nombre-cell" data-label="Nombre"><a href="{{ s.url_fuente }}" target="_blank" rel="noopener">{{ s.nombre }}</a></span>
+                <span data-label="Fuente">
                     <select class="source-select" onchange="updateProvider('{{ s.nombre }}', this.value)">
                         <option value="github" {% if s.get('tipo') == 'github' %}selected{% endif %}>G</option>
                         <option value="docker" {% if s.get('tipo') == 'docker' %}selected{% endif %}>D</option>
                     </select>
                 </span>
-                <span class="version-col" title="Clic para corregir la versión instalada" style="cursor: pointer;" onclick="editInstalled('{{ s.nombre }}', '{{ s.version_instalada }}')">
+                <span class="version-col" data-label="V. Actual" title="Clic para corregir la versión instalada" style="cursor: pointer;" onclick="editInstalled('{{ s.nombre }}', '{{ s.version_instalada }}')">
                     {{ s.version_instalada }}
                     <span class="modo-badge">{{ s.get('modo', 'semver') }}</span>
                 </span>
-                <span class="version-col" title="{{ s.version_remota }}">{{ s.version_remota }}</span>
-                <span class="text-center">
+                <span class="version-col" data-label="V. Nueva" title="{{ s.version_remota }}">{{ s.version_remota }}</span>
+                <span class="text-center" data-label="Controles">
                     <button class="keycap keycap-pause" onclick="togglePause('{{ s.nombre }}')">⏸</button>
                     <button class="keycap keycap-trash" onclick="deleteService('{{ s.nombre }}')">🗑</button>
                 </span>
@@ -309,7 +365,7 @@
             github_token: document.getElementById('cfgGithubToken').value
         });
 
-        const deleteService = (n) => api('/api/delete-service', { nombre: n });
+        const deleteService = (n) => { if (confirm(`¿Eliminar "${n}" del panel? Esta acción no se puede deshacer.`)) api('/api/delete-service', { nombre: n }); };
         const togglePause = (n) => api('/api/toggle-pause', { nombre: n });
         function closeModal(id) { document.getElementById(id).style.display = "none"; }
     </script>

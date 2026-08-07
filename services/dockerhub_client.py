@@ -22,22 +22,43 @@ def _normalizar_repo(identificador: str) -> str:
     return identificador
 
 
-async def obtener_tags(identificador: str, limite: int = 50) -> list[dict]:
-    """Lista de tags ordenados por fecha de push (orden nativo de la API, no semver)."""
+async def obtener_tags_paginado(identificador: str, limite: int = 50, max_paginas: int = 5):
+    """
+    Generador que va pidiendo páginas de tags (orden nativo de la API: last_updated
+    descendente) según se necesiten, sin traer de golpe más de lo necesario.
+
+    Repos muy activos (ej. jellyfin/jellyfin, con builds nightly/rc multi-arquitectura
+    en cada push) pueden empujar el tag estable real fuera de la primera página de 50
+    solo por volumen de publicaciones recientes. El llamante decide cuándo ha visto
+    ya suficiente y deja de iterar.
+    """
     repo = _normalizar_repo(identificador)
     url = f"https://hub.docker.com/v2/repositories/{repo}/tags/?page_size={limite}&ordering=last_updated"
     async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(url, timeout=10.0)
-            if resp.status_code == 200:
-                data = resp.json().get("results", [])
-                return [
+        for _ in range(max_paginas):
+            if not url:
+                return
+            try:
+                resp = await client.get(url, timeout=10.0)
+                if resp.status_code != 200:
+                    logger.warning(f"Docker Hub respondió {resp.status_code} para {identificador}")
+                    return
+                body = resp.json()
+                data = body.get("results", [])
+                yield [
                     {"name": t["name"], "digest": t.get("digest"), "last_pushed": t.get("tag_last_pushed")}
                     for t in data
                 ]
-            logger.warning(f"Docker Hub respondió {resp.status_code} para {identificador}")
-        except Exception as e:
-            logger.error(f"Error Docker Hub tags {identificador}: {e}")
+                url = body.get("next")
+            except Exception as e:
+                logger.error(f"Error Docker Hub tags {identificador}: {e}")
+                return
+
+
+async def obtener_tags(identificador: str, limite: int = 50) -> list[dict]:
+    """Compatibilidad: solo la primera página (usado por obtener_digest_tag y similares)."""
+    async for pagina in obtener_tags_paginado(identificador, limite, max_paginas=1):
+        return pagina
     return []
 
 
@@ -59,16 +80,25 @@ async def resolver_version_mas_reciente(identificador: str, modo: str, patron_su
     Nota: el modo 'floating' NO pasa por aquí -- se resuelve por digest
     directamente en main.py, para no arriesgarnos a devolver una build de
     desarrollo/staging al no haber un orden fiable entre tags flotantes.
+
+    Va acumulando páginas de tags (más recientes primero) y prueba a resolver
+    tras cada una -- así los repos normales resuelven con una sola petición,
+    y solo los repos muy activos (donde el tag estable puede quedar fuera de
+    los primeros 50 por volumen de publicaciones) llegan a pedir páginas extra.
     """
-    tags_info = await obtener_tags(identificador)
-    if not tags_info:
+    if modo not in ("semver", "semver_suffix", "date"):
         return None
-    nombres = [t["name"] for t in tags_info]
 
-    if modo in ("semver", "semver_suffix"):
-        return ve.elegir_mejor_semver(nombres, patron_sufijo)
+    nombres_acumulados: list[str] = []
+    async for pagina in obtener_tags_paginado(identificador):
+        nombres_acumulados.extend(t["name"] for t in pagina)
 
-    if modo == "date":
-        return ve.elegir_mejor_fecha(nombres)
+        if modo in ("semver", "semver_suffix"):
+            candidato = ve.elegir_mejor_semver(nombres_acumulados, patron_sufijo)
+        else:
+            candidato = ve.elegir_mejor_fecha(nombres_acumulados)
+
+        if candidato is not None:
+            return candidato
 
     return None
