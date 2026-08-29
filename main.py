@@ -4,16 +4,18 @@ import logging
 import base64
 import binascii
 import secrets
+import re
 from datetime import datetime
 from contextlib import asynccontextmanager
+from enum import Enum
 
 import httpx
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from services import version_engine as ve
@@ -38,34 +40,121 @@ scheduler = AsyncIOScheduler()
 
 # ---------- Modelos ----------
 
-class ServiceRequest(BaseModel):
-    nombre: str
-    tipo: str
-    identificador: str
-    version_instalada: str
-    modo: str | None = None
-    github_repo: str | None = None
+NOMBRE_SERVICIO_RE = re.compile(r"^[\w][\w ._-]{0,79}$", re.UNICODE)
+VERSION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+:-]{0,127}$")
+REPOSITORIO_DOCKER_RE = re.compile(r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
+REPOSITORIO_GITHUB_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+)
 
 
-class NombreRequest(BaseModel):
-    nombre: str
+class Provider(str, Enum):
+    docker = "docker"
+    github = "github"
 
 
-class ProviderUpdate(BaseModel):
-    nombre: str
-    tipo: str
+class ModoVersion(str, Enum):
+    semver = "semver"
+    semver_suffix = "semver_suffix"
+    date = "date"
+    floating = "floating"
+    digest = "digest"
 
 
-class InstalledUpdate(BaseModel):
-    nombre: str
-    version_instalada: str
+def validar_nombre_servicio(nombre: str) -> str:
+    if not NOMBRE_SERVICIO_RE.fullmatch(nombre):
+        raise ValueError("El nombre solo puede contener letras, números, espacios, punto, guion y guion bajo")
+    return nombre
 
 
-class ConfigUpdate(BaseModel):
-    intervalo: int
-    hora_inicio: int
-    hora_fin: int
-    github_token: str | None = None
+def validar_repositorio_github(repositorio: str) -> str:
+    if not REPOSITORIO_GITHUB_RE.fullmatch(repositorio):
+        raise ValueError("El repositorio de GitHub debe tener el formato propietario/repositorio")
+    return repositorio
+
+
+def validar_identificador_docker(identificador: str) -> str:
+    partes = identificador.split("/")
+    primer_segmento = partes[0]
+    if primer_segmento in oci_client.REGISTROS_OCI_PERMITIDOS:
+        oci_client.validar_identificador_oci(identificador)
+        return identificador
+
+    # Un punto, dos puntos o localhost en el primer segmento denotan un
+    # registro explícito. Sólo admitimos los de la lista OCI anterior.
+    if "." in primer_segmento or ":" in primer_segmento or primer_segmento.lower() == "localhost":
+        raise ValueError("El registro de la imagen no está permitido")
+    if len(partes) > 2 or any(not REPOSITORIO_DOCKER_RE.fullmatch(p) for p in partes):
+        raise ValueError("El identificador de Docker Hub tiene un formato inválido")
+    return identificador
+
+
+class ModeloEntrada(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+class ServiceRequest(ModeloEntrada):
+    nombre: str = Field(min_length=1, max_length=80)
+    tipo: Provider
+    identificador: str = Field(min_length=1, max_length=255)
+    version_instalada: str = Field(min_length=1, max_length=128)
+    modo: ModoVersion | None = None
+    github_repo: str | None = Field(default=None, max_length=201)
+
+    @field_validator("nombre")
+    @classmethod
+    def validar_nombre(cls, valor: str) -> str:
+        return validar_nombre_servicio(valor)
+
+    @field_validator("version_instalada")
+    @classmethod
+    def validar_version(cls, valor: str) -> str:
+        if not VERSION_RE.fullmatch(valor):
+            raise ValueError("La versión instalada tiene un formato inválido")
+        return valor
+
+    @field_validator("github_repo")
+    @classmethod
+    def validar_repo_opcional(cls, valor: str | None) -> str | None:
+        return validar_repositorio_github(valor) if valor else None
+
+    @model_validator(mode="after")
+    def validar_identificador_por_proveedor(self):
+        if self.tipo == Provider.docker:
+            validar_identificador_docker(self.identificador)
+        else:
+            validar_repositorio_github(self.identificador)
+        return self
+
+
+class NombreRequest(ModeloEntrada):
+    nombre: str = Field(min_length=1, max_length=80)
+
+    @field_validator("nombre")
+    @classmethod
+    def validar_nombre(cls, valor: str) -> str:
+        return validar_nombre_servicio(valor)
+
+
+class ProviderUpdate(NombreRequest):
+    tipo: Provider
+
+
+class InstalledUpdate(NombreRequest):
+    version_instalada: str = Field(min_length=1, max_length=128)
+
+    @field_validator("version_instalada")
+    @classmethod
+    def validar_version(cls, valor: str) -> str:
+        if not VERSION_RE.fullmatch(valor):
+            raise ValueError("La versión instalada tiene un formato inválido")
+        return valor
+
+
+class ConfigUpdate(ModeloEntrada):
+    intervalo: int = Field(ge=1, le=10080)
+    hora_inicio: int = Field(ge=0, le=23)
+    hora_fin: int = Field(ge=0, le=23)
+    github_token: str | None = Field(default=None, max_length=500)
     clear_github_token: bool = False
 
 
@@ -120,8 +209,9 @@ async def notificar_telegram(mensaje: str):
 
 def _cliente_docker(identificador: str):
     host = identificador.split("/")[0]
-    if "." in host or host == "ghcr.io":
+    if host in oci_client.REGISTROS_OCI_PERMITIDOS:
         return oci_client
+    validar_identificador_docker(identificador)
     return dockerhub_client
 
 
@@ -368,6 +458,9 @@ def leer_panel(request: Request):
 @app.post("/api/add-service")
 async def add_service(data: ServiceRequest):
     datos = cargar_datos()
+    if any(s.get("nombre", "").casefold() == data.nombre.casefold() for s in datos["servicios"]):
+        raise HTTPException(status_code=409, detail="Ya existe un servicio con ese nombre")
+
     modo, patron = ve.detectar_modo(data.version_instalada, data.identificador)
     if data.modo:
         modo = data.modo
@@ -406,13 +499,23 @@ async def import_docker():
             # Es el propio Pulse: se omite automáticamente
             continue
 
-        modo, patron = ve.detectar_modo(c["tag"], c["identificador"])
+        try:
+            nombre = validar_nombre_servicio(c["nombre"])
+            identificador = validar_identificador_docker(c["identificador"])
+            version = c["tag"].strip()
+            if not VERSION_RE.fullmatch(version):
+                raise ValueError("La versión instalada tiene un formato inválido")
+        except (KeyError, ValueError) as error:
+            logger.warning("Se omite el contenedor no compatible %r: %s", c.get("nombre"), error)
+            continue
+
+        modo, patron = ve.detectar_modo(version, identificador)
 
         datos["servicios"].append({
-            "nombre": c["nombre"],
+            "nombre": nombre,
             "tipo": "docker",
-            "identificador": c["identificador"],
-            "version_instalada": c["tag"],
+            "identificador": identificador,
+            "version_instalada": version,
             "version_remota": "...",
             "modo": modo,
             "patron_sufijo": patron,

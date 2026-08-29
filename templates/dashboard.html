@@ -252,9 +252,9 @@
             <div class="header">
                 <h2>Panel de Control</h2>
                 <div>
-                    <button class="btn btn-theme" id="themeToggle" onclick="toggleTheme()">🌙</button>
+                    <button class="btn btn-theme" id="themeToggle">🌙</button>
                     <button class="btn btn-config" id="openConfig">⚙️ Config</button>
-                    <button class="btn btn-import" onclick="importDocker()">📥 Importar</button>
+                    <button class="btn btn-import" id="importDocker">📥 Importar</button>
                     <button class="btn btn-add" id="openAdd">➕ Añadir Servicio</button>
                 </div>
             </div>
@@ -271,23 +271,23 @@
             <div class="row-plate {% if s.get('pausado', False) %}paused-row{% elif s.estado_led == 'yellow' %}row-update{% endif %}">
                 <span class="text-center" data-label="ID">{{ loop.index }}</span>
                 <span class="text-center" data-label="Estado">
-                    <span class="led" style="background-color: {% if s.get('pausado', False) %}gray{% else %}{{ s.get('estado_led', 'red') }}{% endif %};" onclick="checkOne('{{ s.nombre }}')"></span>
+                    <span class="led" style="background-color: {% if s.get('pausado', False) %}gray{% else %}{{ s.get('estado_led', 'red') }}{% endif %};" data-action="check-one" data-service-name="{{ s.nombre }}"></span>
                 </span>
                 <span class="nombre-cell" data-label="Nombre"><a href="{{ s.url_fuente }}" target="_blank" rel="noopener">{{ s.nombre }}</a></span>
                 <span data-label="Fuente">
-                    <select class="source-select" onchange="updateProvider('{{ s.nombre }}', this.value)">
+                    <select class="source-select" data-action="update-provider" data-service-name="{{ s.nombre }}">
                         <option value="github" {% if s.get('tipo') == 'github' %}selected{% endif %}>G</option>
                         <option value="docker" {% if s.get('tipo') == 'docker' %}selected{% endif %}>D</option>
                     </select>
                 </span>
-                <span class="version-col" data-label="V. Actual" title="Clic para corregir la versión instalada" style="cursor: pointer;" onclick="editInstalled('{{ s.nombre }}', '{{ s.version_instalada }}')">
+                <span class="version-col" data-label="V. Actual" title="Clic para corregir la versión instalada" style="cursor: pointer;" data-action="edit-installed" data-service-name="{{ s.nombre }}" data-service-version="{{ s.version_instalada }}">
                     {{ s.version_instalada }}
                     <span class="modo-badge">{{ s.get('modo', 'semver') }}</span>
                 </span>
                 <span class="version-col" data-label="V. Nueva" title="{{ s.version_remota }}">{{ s.version_remota }}</span>
                 <span class="text-center" data-label="Controles">
-                    <button class="keycap keycap-pause" onclick="togglePause('{{ s.nombre }}')">⏸</button>
-                    <button class="keycap keycap-trash" onclick="deleteService('{{ s.nombre }}')">🗑</button>
+                    <button class="keycap keycap-pause" data-action="toggle-pause" data-service-name="{{ s.nombre }}">⏸</button>
+                    <button class="keycap keycap-trash" data-action="delete-service" data-service-name="{{ s.nombre }}">🗑</button>
                 </span>
             </div>
             {% endfor %}
@@ -303,8 +303,8 @@
             <input type="text" id="serviceVersion" placeholder="Versión instalada (ej. v2.7.6-ls351)">
             <input type="text" id="serviceGithubRepo" placeholder="Repo de GitHub (opcional, ej. jellyfin/jellyfin)">
             <div class="modal-hint">Pulse detecta automáticamente cómo comparar la versión (semver, fecha, tag flotante...).</div>
-            <button class="btn-save" onclick="saveService()">Guardar</button>
-            <button class="btn-save" style="background: #333;" onclick="closeModal('modalAdd')">Cancelar</button>
+            <button class="btn-save" data-action="save-service">Guardar</button>
+            <button class="btn-save" style="background: #333;" data-action="close-modal" data-modal-id="modalAdd">Cancelar</button>
         </div>
     </div>
 
@@ -320,14 +320,16 @@
                 {% if github_token_configured %}Hay un token configurado. Déjalo vacío para conservarlo.{% else %}No hay ningún token configurado.{% endif %}
             </div>
             <label class="modal-hint"><input type="checkbox" id="cfgClearGithubToken"> Eliminar el token guardado localmente</label>
-            <button class="btn-save" onclick="saveConfig()">Guardar Configuración</button>
-            <button class="btn-save" style="background: #333;" onclick="closeModal('modalConfig')">Cerrar</button>
+            <button class="btn-save" data-action="save-config">Guardar Configuración</button>
+            <button class="btn-save" style="background: #333;" data-action="close-modal" data-modal-id="modalConfig">Cerrar</button>
         </div>
     </div>
 
     <script>
-        document.getElementById("openAdd").onclick = () => document.getElementById("modalAdd").style.display = "flex";
-        document.getElementById("openConfig").onclick = () => document.getElementById("modalConfig").style.display = "flex";
+        document.getElementById("openAdd").addEventListener("click", () => openModal("modalAdd"));
+        document.getElementById("openConfig").addEventListener("click", () => openModal("modalConfig"));
+        document.getElementById("themeToggle").addEventListener("click", toggleTheme);
+        document.getElementById("importDocker").addEventListener("click", importDocker);
 
         function applyTheme(theme) {
             document.body.setAttribute('data-theme', theme);
@@ -375,7 +377,24 @@
 
         const deleteService = (n) => { if (confirm(`¿Eliminar "${n}" del panel? Esta acción no se puede deshacer.`)) api('/api/delete-service', { nombre: n }); };
         const togglePause = (n) => api('/api/toggle-pause', { nombre: n });
+        function openModal(id) { document.getElementById(id).style.display = "flex"; }
         function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+        document.addEventListener("change", (event) => {
+            const { action, serviceName } = event.target.dataset;
+            if (action === "update-provider") updateProvider(serviceName, event.target.value);
+        });
+
+        document.addEventListener("click", (event) => {
+            const { action, serviceName, serviceVersion, modalId } = event.target.dataset;
+            if (action === "check-one") checkOne(serviceName);
+            if (action === "edit-installed") editInstalled(serviceName, serviceVersion);
+            if (action === "toggle-pause") togglePause(serviceName);
+            if (action === "delete-service") deleteService(serviceName);
+            if (action === "save-service") saveService();
+            if (action === "save-config") saveConfig();
+            if (action === "close-modal") closeModal(modalId);
+        });
     </script>
 </body>
 </html>

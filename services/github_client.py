@@ -60,12 +60,23 @@ async def obtener_ultima_release(repo: str, token: str | None = None) -> str | N
 async def resolver_version_mas_reciente(
     repo: str, modo: str, patron_sufijo: str | None, token: str | None = None
 ) -> str | None:
-    if modo in ("semver", "semver_suffix"):
+    if modo == "semver":
+        # Para SemVer estándar, GitHub ya proporciona la última release estable
+        # sin necesidad de recorrer todos los tags del repositorio.
+        release = await obtener_ultima_release(repo, token=token)
+        if release:
+            return release
+
+        # Fallback: si no existe una release válida, usamos los tags.
+        tags = await obtener_tags(repo, token=token)
+        return ve.elegir_mejor_semver(tags, patron_sufijo)
+
+    if modo == "semver_suffix":
+        # Los sufijos de build (ej. -lsXXX) requieren consultar los tags.
         tags = await obtener_tags(repo, token=token)
         mejor = ve.elegir_mejor_semver(tags, patron_sufijo)
         if mejor:
             return mejor
-        # Ningún tag se pudo interpretar como semver: recurrimos a la release marcada
         return await obtener_ultima_release(repo, token=token)
 
     if modo == "date":
