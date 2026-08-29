@@ -315,8 +315,11 @@
             <label>Hora Inicio (0-23):</label><input type="number" id="cfgStart" value="{{ conf.hora_inicio }}">
             <label>Hora Fin (0-23):</label><input type="number" id="cfgEnd" value="{{ conf.hora_fin }}">
             <label>Token de GitHub (opcional):</label>
-            <input type="password" id="cfgGithubToken" value="{{ conf.github_token or '' }}" placeholder="Sube el límite de 60 a 5000 peticiones/hora">
-            <div class="modal-hint">Se guarda en texto plano en config/servicios.json, igual que el resto de la configuración local.</div>
+            <input type="password" id="cfgGithubToken" value="" autocomplete="new-password" placeholder="Introduce uno nuevo para sustituir el actual">
+            <div class="modal-hint">
+                {% if github_token_configured %}Hay un token configurado. Déjalo vacío para conservarlo.{% else %}No hay ningún token configurado.{% endif %}
+            </div>
+            <label class="modal-hint"><input type="checkbox" id="cfgClearGithubToken"> Eliminar el token guardado localmente</label>
             <button class="btn-save" onclick="saveConfig()">Guardar Configuración</button>
             <button class="btn-save" style="background: #333;" onclick="closeModal('modalConfig')">Cerrar</button>
         </div>
@@ -358,12 +361,17 @@
             github_repo: document.getElementById("serviceGithubRepo").value || null
         });
 
-        const saveConfig = () => api('/api/update-config', {
-            intervalo: parseInt(document.getElementById('cfgInterval').value),
-            hora_inicio: parseInt(document.getElementById('cfgStart').value),
-            hora_fin: parseInt(document.getElementById('cfgEnd').value),
-            github_token: document.getElementById('cfgGithubToken').value
-        });
+        const saveConfig = () => {
+            const clearGithubToken = document.getElementById('cfgClearGithubToken').checked;
+            const githubToken = document.getElementById('cfgGithubToken').value.trim();
+            return api('/api/update-config', {
+                intervalo: parseInt(document.getElementById('cfgInterval').value),
+                hora_inicio: parseInt(document.getElementById('cfgStart').value),
+                hora_fin: parseInt(document.getElementById('cfgEnd').value),
+                github_token: clearGithubToken || !githubToken ? null : githubToken,
+                clear_github_token: clearGithubToken
+            });
+        };
 
         const deleteService = (n) => { if (confirm(`¿Eliminar "${n}" del panel? Esta acción no se puede deshacer.`)) api('/api/delete-service', { nombre: n }); };
         const togglePause = (n) => api('/api/toggle-pause', { nombre: n });

@@ -54,7 +54,7 @@ You have two options: use the prebuilt image (faster, no need to clone the repo)
    mkdir -p pulse/config && cd pulse
    ```
 
-2. Download [`docker-compose-image-example.yml`](./docker-compose-image-example.yml) and [`.env.example`](./.env.example) from this repo into that folder, and rename them to `docker-compose.yml` and `.env` respectively. Fill in `.env` with your own values.
+2. Download [`docker-compose-image-example.yml`](./docker-compose-image-example.yml) and [`.env.example`](./.env.example) from this repo into that folder, and rename them to `docker-compose.yml` and `.env` respectively. Fill in `.env` with your own values, including the required dashboard password.
 
 3. Start it:
 
@@ -73,7 +73,7 @@ You have two options: use the prebuilt image (faster, no need to clone the repo)
    cd pulse
    ```
 
-2. Rename [`docker-compose-example.yml`](./docker-compose-example.yml) to `docker-compose.yml`, and `.env.example` to `.env`. Fill in `.env` with your own values.
+2. Rename [`docker-compose-example.yml`](./docker-compose-example.yml) to `docker-compose.yml`, and `.env.example` to `.env`. Fill in `.env` with your own values, including the required dashboard password.
 
 3. Build and start:
 
@@ -89,13 +89,15 @@ Environment variables (set in your `.env` or directly in `docker-compose.yml`):
 
 | Variable | Required | Description |
 |---|---|---|
+| `PULSE_AUTH_USER` | No | Dashboard username (defaults to `pulse`) |
+| `PULSE_AUTH_PASSWORD` | Yes | Dashboard password. Pulse refuses to start if it is missing. |
 | `TELEGRAM_TOKEN` | No | Your Telegram bot token, used to send update notifications |
 | `TELEGRAM_CHAT_ID` | No | Chat/user ID that receives the notifications |
 | `TZ` | No | Container timezone (e.g. `Europe/Madrid`) |
 | `DEFAULT_INTERVAL` | No | Default check interval in minutes, used only if none is saved yet (defaults to 30) |
 | `GITHUB_TOKEN` | No | Personal GitHub token, raises the rate limit from 60 to 5000 requests/hour. Can also be set later from the dashboard, under Config |
 
-Everything else (interval, check time window, watched services) is managed from the web dashboard, not from a file. `config/servicios.json` is created automatically on first run and is not pushed to the repository (it's in `.gitignore`, since it may contain your GitHub token if you save one from the dashboard).
+Everything else (interval, check time window, watched services) is managed from the web dashboard, not from a file. `config/servicios.json` is created automatically on first run and is not pushed to the repository. If you save a GitHub token from the dashboard, it is stored locally in that file; its value is never sent back to the browser. HTTP Basic authentication must be used behind HTTPS (for example, through a reverse proxy) whenever the dashboard is reachable over an untrusted network.
 
 ## Basic usage
 

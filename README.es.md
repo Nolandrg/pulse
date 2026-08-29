@@ -54,7 +54,7 @@ Tienes dos opciones: usar la imagen ya construida (más rápido, sin clonar el r
    mkdir -p pulse/config && cd pulse
    ```
 
-2. Descarga [`docker-compose-image-example.yml`](./docker-compose-image-example.yml) y [`.env.example`](./.env.example) de este repo en esa carpeta, y renómbralos a `docker-compose.yml` y `.env` respectivamente. Rellena `.env` con tus datos.
+2. Descarga [`docker-compose-image-example.yml`](./docker-compose-image-example.yml) y [`.env.example`](./.env.example) de este repo en esa carpeta, y renómbralos a `docker-compose.yml` y `.env` respectivamente. Rellena `.env` con tus datos, incluida la contraseña obligatoria del panel.
 
 3. Levántalo:
 
@@ -73,7 +73,7 @@ Tienes dos opciones: usar la imagen ya construida (más rápido, sin clonar el r
    cd pulse
    ```
 
-2. Renombra [`docker-compose-example.yml`](./docker-compose-example.yml) a `docker-compose.yml`, y `.env.example` a `.env`. Rellena `.env` con tus datos.
+2. Renombra [`docker-compose-example.yml`](./docker-compose-example.yml) a `docker-compose.yml`, y `.env.example` a `.env`. Rellena `.env` con tus datos, incluida la contraseña obligatoria del panel.
 
 3. Constrúyelo y levántalo:
 
@@ -89,13 +89,15 @@ Variables de entorno (se definen en tu `.env` o directamente en el `docker-compo
 
 | Variable | Obligatoria | Descripción |
 |---|---|---|
+| `PULSE_AUTH_USER` | No | Usuario del panel (por defecto `pulse`) |
+| `PULSE_AUTH_PASSWORD` | Sí | Contraseña del panel. Pulse se niega a iniciar si falta. |
 | `TELEGRAM_TOKEN` | No | Token de tu bot de Telegram, para recibir notificaciones de actualizaciones |
 | `TELEGRAM_CHAT_ID` | No | ID del chat/usuario al que se envían las notificaciones |
 | `TZ` | No | Zona horaria del contenedor (ej. `Europe/Madrid`) |
 | `DEFAULT_INTERVAL` | No | Intervalo de comprobación en minutos si no hay uno guardado aún (por defecto 30) |
 | `GITHUB_TOKEN` | No | Token personal de GitHub para subir el límite de peticiones de 60 a 5000/hora. También se puede configurar desde el propio panel, en Config |
 
-El resto de ajustes (intervalo, horario de comprobación, servicios vigilados) se gestionan desde el panel web, no por archivo. `config/servicios.json` se crea automáticamente en el primer arranque y no se sube al repositorio (está en `.gitignore`, ya que puede contener tu token de GitHub si lo guardas desde el panel).
+El resto de ajustes (intervalo, horario de comprobación, servicios vigilados) se gestionan desde el panel web, no por archivo. `config/servicios.json` se crea automáticamente en el primer arranque y no se sube al repositorio. Si guardas un token de GitHub desde el panel, queda almacenado localmente en ese archivo; su valor nunca se devuelve al navegador. Si el panel es accesible desde una red no confiable, la autenticación HTTP Basic debe usarse detrás de HTTPS (por ejemplo, mediante un proxy inverso).
 
 ## Uso básico
 

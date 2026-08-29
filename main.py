@@ -1,6 +1,9 @@
 import json
 import os
 import logging
+import base64
+import binascii
+import secrets
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -8,7 +11,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -27,6 +30,8 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 GITHUB_TOKEN_ENV = os.environ.get("GITHUB_TOKEN")
 DEFAULT_INTERVAL = int(os.environ.get("DEFAULT_INTERVAL", "30"))
+PULSE_AUTH_USER = os.environ.get("PULSE_AUTH_USER") or "pulse"
+PULSE_AUTH_PASSWORD = os.environ.get("PULSE_AUTH_PASSWORD")
 
 scheduler = AsyncIOScheduler()
 
@@ -61,6 +66,7 @@ class ConfigUpdate(BaseModel):
     hora_inicio: int
     hora_fin: int
     github_token: str | None = None
+    clear_github_token: bool = False
 
 
 # ---------- Persistencia ----------
@@ -267,6 +273,8 @@ async def check_updates_task():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not PULSE_AUTH_PASSWORD:
+        raise RuntimeError("PULSE_AUTH_PASSWORD debe estar definido para iniciar Pulse")
     datos_iniciales = cargar_datos()
     intervalo = datos_iniciales["configuracion_global"].get("intervalo_minutos", DEFAULT_INTERVAL)
     scheduler.add_job(check_updates_task, "interval", minutes=intervalo, id="check_updates")
@@ -277,6 +285,33 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Pulse", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+def _credenciales_validas(cabecera_autorizacion: str | None) -> bool:
+    if not cabecera_autorizacion or not cabecera_autorizacion.startswith("Basic "):
+        return False
+
+    try:
+        valor = base64.b64decode(cabecera_autorizacion[6:], validate=True).decode("utf-8")
+        usuario, contrasena = valor.split(":", 1)
+    except (ValueError, UnicodeDecodeError, binascii.Error):
+        return False
+
+    return (
+        secrets.compare_digest(usuario, PULSE_AUTH_USER)
+        and secrets.compare_digest(contrasena, PULSE_AUTH_PASSWORD or "")
+    )
+
+
+@app.middleware("http")
+async def requerir_autenticacion(request: Request, call_next):
+    if not _credenciales_validas(request.headers.get("Authorization")):
+        return PlainTextResponse(
+            "Autenticación requerida",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Pulse"'},
+        )
+    return await call_next(request)
 
 
 # ---------- Enlace a la página de origen (para el nombre del servicio) ----------
@@ -314,10 +349,19 @@ def leer_panel(request: Request):
     servicios = datos.get("servicios", [])
     for s in servicios:
         s["url_fuente"] = construir_url_fuente(s)
+
+    # El token jamás se entrega al navegador. La interfaz sólo necesita saber
+    # si hay uno efectivo (guardado localmente o proporcionado por entorno).
+    conf_panel = dict(datos["configuracion_global"])
+    conf_panel.pop("github_token", None)
     return Jinja2Templates(directory=TEMPLATES_DIR).TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"servicios": servicios, "conf": datos["configuracion_global"]},
+        context={
+            "servicios": servicios,
+            "conf": conf_panel,
+            "github_token_configured": bool(token_github(datos)),
+        },
     )
 
 
@@ -440,8 +484,12 @@ async def update_config(data: ConfigUpdate):
     datos["configuracion_global"]["intervalo_minutos"] = data.intervalo
     datos["configuracion_global"]["hora_inicio"] = data.hora_inicio
     datos["configuracion_global"]["hora_fin"] = data.hora_fin
-    if data.github_token is not None:
-        datos["configuracion_global"]["github_token"] = data.github_token or None
+    # Un campo vacío conserva el token actual. Sólo se borra con la acción
+    # explícita de la interfaz para evitar eliminar secretos por accidente.
+    if data.clear_github_token:
+        datos["configuracion_global"]["github_token"] = None
+    elif data.github_token:
+        datos["configuracion_global"]["github_token"] = data.github_token
     guardar_datos(datos)
 
     try:
