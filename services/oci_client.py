@@ -168,13 +168,50 @@ async def obtener_tags(identificador: str, limite: int = 50) -> list[str]:
 
 
 
-async def resolver_version_mas_reciente(identificador: str, modo: str, patron_sufijo: str | None) -> str | None:
+async def obtener_version_immich() -> str | None:
+    """Obtiene la versión estable publicada por Immich en GHCR."""
+    host = "ghcr.io"
+    repo = "immich-app/immich-server"
+    tag = "release"
+
+    await validar_destino_oci(host)
+    token = await _obtener_token(host, repo)
+
+    headers = {"Accept": "application/vnd.oci.image.index.v1+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    url = f"https://{host}/v2/{repo}/manifests/{tag}"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(url, headers=headers, timeout=10.0)
+            if resp.status_code != 200:
+                return None
+
+            annotations = resp.json().get("annotations") or {}
+            return annotations.get("org.opencontainers.image.version")
+        except Exception as e:
+            logger.error(f"Error obteniendo versión de Immich: {e}")
+            return None
+
+
+async def resolver_version_mas_reciente(
+    identificador: str,
+    modo: str,
+    patron_sufijo: str | None,
+) -> str | None:
     """
-    Nota: el modo 'floating' NO pasa por aquí -- se resuelve por digest
-    directamente en main.py (ver _verificar_floating), porque GHCR/OCI no
-    garantiza ningún orden significativo en la lista de tags: coger "el primero"
-    podía devolver perfectamente una build de staging o desarrollo.
+    Resuelve la versión más reciente según el proveedor.
     """
+    if (
+        identificador == "ghcr.io/immich-app/immich-server"
+        and modo in ("semver", "semver_suffix")
+    ):
+        version = await obtener_version_immich()
+        if version:
+            return version
+
     tags = await obtener_tags(identificador)
     if not tags:
         return None
