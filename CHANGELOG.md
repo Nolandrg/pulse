@@ -5,6 +5,12 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato sigue las convenciones de [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.1] - 2026-09-03
+
+### Corregido
+
+- Corregida la resolución de versiones de Immich en GHCR: Pulse usa la etiqueta estable `release` y la versión OCI publicada por Immich, evitando interpretar el listado lexicográfico de tags como SemVer.
+
 ## [1.1.0] - 2026-08-03
 
 ### Añadido
