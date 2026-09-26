@@ -197,6 +197,8 @@ def token_github(datos: dict) -> str | None:
 async def notificar_telegram(mensaje: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         return
+    hora = datetime.now().strftime("%H:%M")
+    mensaje = f"{hora} - PULSE * {mensaje}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     async with httpx.AsyncClient() as client:
         try:
