@@ -5,6 +5,12 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 El formato sigue las convenciones de [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.2] - 2026-09-29
+
+### Añadido
+
+- Las notificaciones de Telegram incluyen ahora la hora local y el origen del mensaje (`PULSE`).
+
 ## [1.2.1] - 2026-09-03
 
 ### Corregido
