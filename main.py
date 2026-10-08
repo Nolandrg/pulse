@@ -177,6 +177,8 @@ def cargar_datos() -> dict:
             datos = json.load(f)
             datos.setdefault("configuracion_global", default_data["configuracion_global"])
             datos["configuracion_global"].setdefault("github_token", None)
+            for servicio in datos.get("servicios", []):
+                servicio.setdefault("notificado", 0)
             return datos
         except Exception:
             return default_data
@@ -219,7 +221,7 @@ def _cliente_docker(identificador: str):
 
 # ---------- Verificación de un servicio ----------
 
-async def _verificar_floating(s: dict, tipo: str, identificador: str, estado_previo: str | None) -> bool:
+async def _verificar_floating(s: dict, tipo: str, identificador: str) -> bool:
     """
     Para tags flotantes (latest, release, stable...) y tags de familia (8, 16...)
     NUNCA intentamos adivinar "el nombre de la próxima versión" -- eso es lo que
@@ -231,6 +233,7 @@ async def _verificar_floating(s: dict, tipo: str, identificador: str, estado_pre
         # No aplica: un repo de GitHub en modo flotante no tiene un "digest de imagen"
         s["estado_led"] = "green"
         s["version_remota"] = s["version_instalada"]
+        s["notificado"] = 0
         return False
 
     tag_ref = s["version_instalada"]
@@ -259,7 +262,16 @@ async def _verificar_floating(s: dict, tipo: str, identificador: str, estado_pre
 
     s["estado_led"] = "yellow" if cambio else "green"
     s["version_remota"] = f"{tag_ref} (nuevo build)" if cambio else f"{tag_ref} (al día)"
-    return s["estado_led"] == "yellow" and estado_previo != "yellow"
+
+    if not cambio:
+        s["notificado"] = 0
+        return False
+
+    if s.get("notificado", 0) == 0:
+        s["notificado"] = 1
+        return True
+
+    return False
 
 
 async def verificar_servicio(s: dict, gh_token: str | None, mapa_contenedores: dict | None = None) -> bool:
@@ -283,10 +295,8 @@ async def verificar_servicio(s: dict, gh_token: str | None, mapa_contenedores: d
             if info_actual.get("digest"):
                 s["digest_instalado"] = info_actual["digest"]
 
-    estado_previo = s.get("estado_led")
-
     if modo == "floating":
-        return await _verificar_floating(s, tipo, identificador, estado_previo)
+        return await _verificar_floating(s, tipo, identificador)
 
     try:
         if tipo == "github":
@@ -316,7 +326,18 @@ async def verificar_servicio(s: dict, gh_token: str | None, mapa_contenedores: d
         resultado = None
 
     s["estado_led"] = resultado if resultado else "red"
-    return s["estado_led"] == "yellow" and estado_previo != "yellow"
+
+    if resultado == "green":
+        s["notificado"] = 0
+        return False
+
+    if resultado == "yellow":
+        if s.get("notificado", 0) == 0:
+            s["notificado"] = 1
+            return True
+        return False
+
+    return False
 
 
 def dentro_de_horario(conf: dict) -> bool:
@@ -479,6 +500,7 @@ async def add_service(data: ServiceRequest):
         "digest_instalado": None,
         "digest_remoto": None,
         "estado_led": "red",
+        "notificado": 0,
         "pausado": False,
     })
     guardar_datos(datos)
@@ -524,6 +546,7 @@ async def import_docker():
             "digest_instalado": c.get("digest"),
             "digest_remoto": None,
             "estado_led": "red",
+            "notificado": 0,
             "pausado": False,
         })
         nuevos += 1
@@ -555,6 +578,7 @@ async def update_provider(data: ProviderUpdate):
             s["tipo"] = data.tipo
             s["version_remota"] = "..."
             s["estado_led"] = "red"
+            s["notificado"] = 0
     guardar_datos(datos)
     return {"status": "ok"}
 
